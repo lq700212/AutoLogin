@@ -1,0 +1,14 @@
+# 运行日志(仅存在于运行机,不属于代码库)
+AutoLogin.log
+
+# 现场实配文件(含账号密码,不入库;首次运行 exe 自动生成默认配置)
+AutoLogin.ini
+
+# Windows 系统垃圾
+Thumbs.db
+desktop.ini
+
+# 编译中间产物(本工程用 csc 直编,理论上不生成,防御性排除)
+*.pdb
+bin/
+obj/
