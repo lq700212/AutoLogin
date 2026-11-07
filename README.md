@@ -5,8 +5,8 @@
 **拉起上位机软件 → 自动填入账号密码 → 点"确定"登录,全程无人值守**
 
 ![.NET Framework](https://img.shields.io/badge/.NET_Framework-4.8-5C2D91?logo=dotnet)
-![界面](https://img.shields.io/badge/界面-WPF_纯代码-0078D4?logo=windows)
-![平台](https://img.shields.io/badge/平台-Windows-lightgrey?logo=windows)
+![界面](https://img.shields.io/badge/界面-WPF_XAML_+_MVVM-0078D4?logo=windows)
+![平台](https://img.shields.io/badge/平台-Windows_7~11-lightgrey?logo=windows)
 ![交付形态](https://img.shields.io/badge/交付-单文件exe_零依赖-2EA043)
 
 单文件 exe(零依赖、免安装、拷走即跑),双击打开可视化配置界面;
@@ -36,7 +36,8 @@ Start-Process .\AutoLogin.exe -ArgumentList "/auto"     # 同样支持 -auto /ru
 
 ![可视化配置界面](docs/images/gui-config.png)
 
-*出厂默认态:四张卡片覆盖全部配置项,底部三个动作按钮;右上角"×"退出不影响已保存配置。*
+*四张配置卡片(目标软件 / 登录账号 / 窗口识别与时序 / 行为)在一屏内改完,
+右侧实时日志同步显示运行进度;底部三个动作按钮,右上角"×"退出不影响已保存配置。*
 
 所有配置落盘 `AutoLogin.ini`,界面"保存"与手工编辑完全兼容。
 
@@ -44,9 +45,13 @@ Start-Process .\AutoLogin.exe -ArgumentList "/auto"     # 同样支持 -auto /ru
 
 - **精确控件模式**:枚举登录框子控件后点名操作,`WM_SETTEXT` 静默写入账密并读回验证,
   提交只点"确定/OK/登录"按钮,**绝不触碰"取消",验证不过绝不发送任何按键**;
-- **可视化配置**:WPF 深色界面(uiverse 风格),ini 全部配置项一屏可改,"保存并立即运行一次"即刻后台试跑;
+- **WPF + XAML + MVVM**:界面、视图模型、服务分层,主题资源与控件样式集中管理,
+  沿用深色卡片风格,配置区紧凑排列、无滚动条;
+- **内置实时日志**:右侧面板实时显示运行状态与日志,按级别着色,可一键清空;
+  同样的内容写入 `AutoLogin.log`,现场排障可直接发给维护者;
 - **一键开机自启动**:界面开关即建/删启动项快捷方式,目标自动带 `/auto` 参数与程序图标;
-- **单文件零依赖**:csc 直编 winexe,WPF 用 Windows 自带运行库,图标编译进 exe,覆盖旧 exe 即升级;
+- **单文件零依赖**:`dotnet build` 输出的 exe 无附带 dll、无 config(`AutoLogin.exe.config` 已禁用),
+  WPF 用 Windows 自带运行库,图标编译进 exe,覆盖旧 exe 即升级;
 - **现场友好**:输入框序号认错改一个 ini 数字即可,不用重新编译;日志超 512KB 自动清理,不会无限膨胀。
 
 ## 工作流程
@@ -75,15 +80,29 @@ flowchart LR
 
 ```text
 AutoLogin/
-├── AutoLogin.exe        # 主程序:双击=配置界面,/auto=开机静默登录(单文件)
-├── AutoLogin.cs         # 自动登录主流程 + 自启动部署源码
-├── AutoLoginGui.cs      # 可视化配置界面源码(WPF 纯代码,无 XAML)
+├── AutoLogin.sln              # 解决方案
+├── AutoLogin.exe              # 发布产物:双击=配置界面,/auto=静默登录(单文件)
+├── build.ps1                  # 一键构建 Release 并复制 exe 到根目录
 ├── assets/
-│   ├── app.ico          # 程序图标(9 档 16~256px,经 /win32icon 编译进 exe)
-│   └── app.png          # 图标设计源文件(800×800)
+│   ├── app.ico                # 程序图标(编译进 exe)
+│   └── app.png                # 图标设计源文件
 ├── docs/
-│   └── images/          # README 配图
-└── README.md            # 本文档
+│   └── images/                # README 配图
+├── src/
+│   └── AutoLogin/
+│       ├── AutoLogin.csproj   # net48 + UseWPF,无第三方 NuGet
+│       ├── App.xaml(.cs)      # 入口:无参数=GUI,/auto=静默
+│       ├── app.manifest       # DPI 感知 / 权限 / 兼容性
+│       ├── Assets/app.ico
+│       ├── Behaviors/         # PasswordBox 绑定等附加行为
+│       ├── Converters/        # 布尔/状态/日志级别到颜色或可见性
+│       ├── Interop/           # Win32 API、快捷方式 COM 封装
+│       ├── Models/            # AppConfig / LogEntry / RunResult
+│       ├── Services/          # 配置、日志、启动项、进程树、窗口定位、登录自动化
+│       ├── Theme/             # 深色主题资源与控件样式
+│       ├── ViewModels/        # MainViewModel 与轻量 MVVM 基础设施
+│       └── Views/             # MainWindow.xaml
+└── README.md
 ```
 
 > `AutoLogin.ini`(现场账密)与 `AutoLogin.log`(运行日志)只在运行机生成,**不入 git 库**。
@@ -110,7 +129,7 @@ AutoLogin/
 
 1. 拷贝 `AutoLogin.exe` 覆盖旧的(ini 不用动,旧配置兼容);
 2. 核对 ini 的 `ExePath` 与现场软件路径一致,账密核对;
-3. 双击 exe 打开配置界面,点**保存并立即运行一次**试跑,确认软件拉起、账密写入并被"确定"提交;
+3. 双击 exe 打开配置界面,点**保存并立即运行**试跑,确认软件拉起、账密写入并被"确定"提交;
 4. 日志出现 `精确控件模式:...` 与两行 `读回验证 通过` 即机制就位;
 5. 在"行为"卡片打开**"开机自动运行"**开关——自动创建启动项快捷方式
    (`shell:startup\AutoLogin.lnk`,目标已含 `/auto`,图标=本 exe);
@@ -133,7 +152,7 @@ AutoLogin/
 另有进程树绑定(只认目标软件进程树,同机其它软件弹窗不误伤)、稳窗判定(防 splash 抢跑)、
 焦点确认重试、防双开互斥等守护机制,详见源码注释。
 
-## 常见问题排查(看 `AutoLogin.log`)
+## 常见问题排查(看 `AutoLogin.log` 或界面右侧日志)
 
 | 日志现象 | 含义与处理 |
 |----------|------------|
@@ -147,17 +166,16 @@ AutoLogin/
 
 ## 维护者:编译
 
-在工程根目录一条 csc 命令直编:
+需要 .NET SDK(用于构建,运行机不需要)。在工程根目录执行:
 
 ```powershell
-C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /platform:anycpu /codepage:65001
-  /win32icon:"assets\app.ico"
-  /lib:"C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8"
-  /r:PresentationFramework.dll /r:PresentationCore.dll /r:WindowsBase.dll /r:System.Xaml.dll
-  /r:System.dll /r:System.Core.dll
-  /out:AutoLogin.exe AutoLogin.cs AutoLoginGui.cs
+# 仅构建
+dotnet build AutoLogin.sln -c Release
+
+# 一键构建并把单文件 exe 复制到根目录(推荐发版)
+powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-- WPF 界面用纯 C# 构建(不用 XAML),无需 msbuild/XAML 编译管道;
-- 主流程只依赖 Win32 API 与 mscorlib,与界面代码解耦;代码约束 .NET Framework 4.8 / C# 5 语法;
-- 覆盖编译前若 exe 在运行,先结束进程;图标相关说明见上文目录树与 `assets\` 注释。
+- 目标框架 `net48`,SDK 风格工程 + `UseWPF=true`,界面为 XAML,架构为轻量 MVVM;
+- 不引入任何第三方 NuGet 包,Release 输出目录只有 `AutoLogin.exe`(无 dll、无 exe.config);
+- 历史版本的单文件源码(`AutoLogin.cs` / `AutoLoginGui.cs`)已由 git 历史保留,当前版本不再使用。
